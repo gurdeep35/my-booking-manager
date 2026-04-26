@@ -29,7 +29,7 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
 
         # अभी टेस्ट के लिए आसान फिल्टर (इनमें से कोई भी एक शब्द होगा तो मैसेज जाएगा)
-        pattern = r"(?i)(booking|need|gadi|chd|delhi|गाड़ी|ertiga|dzire|innova)"
+        pattern = r"(?i)(booking|need|drop|chd|delhi|chandigarh|zirakpur|mohali|panchkula|gurgaon|gurugram|noida|faridabaad|ertiga|dzire|innova)"
 
         if re.search(pattern, text):
             sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
