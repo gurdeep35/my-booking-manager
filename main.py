@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import requests
 import re
-import time # समय ट्रैक करने के लिए ज़रूरी
+import time # समय और डिले के लिए ज़रूरी
 
 app = Flask(__name__)
 
@@ -38,21 +38,23 @@ def whatsapp_webhook():
         # 2. ज़रूरत वाले शब्द
         need_words = r"(?i)(need|pickup|drop)"
 
-        # 3. लॉजिक और डुप्लीकेट फ़िल्टर
+        # 3. लॉजिक, डुप्लीकेट फ़िल्टर और डिले
         if re.search(route_pattern, text) and re.search(need_words, text):
             
             # --- मैसेज रिपीट न हो उसके लिए चेक ---
             current_time = time.time()
-            message_key = text.strip().lower() # मैसेज की पहचान
+            message_key = text.strip().lower()
 
-            # अगर मैसेज पिछले 10 मिनट (600 सेकंड) में भेजा जा चुका है, तो इग्नोर करें
             if message_key in sent_messages_cache:
                 if (current_time - sent_messages_cache[message_key]) < 600:
-                    print("Duplicate message ignored.")
                     return jsonify({"status": "duplicate_ignored"}), 200
             
-            # याददाश्त में सेव करें और आगे भेजें
+            # याददाश्त में सेव करें
             sent_messages_cache[message_key] = current_time
+            
+            # --- 3 सेकंड का डिले (मैसेज भेजने से पहले इंतज़ार) ---
+            print("Message matched! Waiting 3 seconds before forwarding...")
+            time.sleep(3) 
             
             sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
             send_to_my_group(text, sender_name)
@@ -60,7 +62,7 @@ def whatsapp_webhook():
     return jsonify({"status": "success"}), 200
 
 def send_to_my_group(message_text, sender_name):
-    url = f"https://api.green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
+    url = f"https://green-api.com{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
     
     payload = {
         "chatId": TARGET_GROUP_ID,
@@ -68,8 +70,7 @@ def send_to_my_group(message_text, sender_name):
     }
     
     response = requests.post(url, json=payload)
-    print(f"DEBUG: Green-API Response Code: {response.status_code}")
-    print(f"DEBUG: Green-API Response Body: {response.text}")
+    print(f"DEBUG: Sent to group. Response Code: {response.status_code}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
