@@ -35,7 +35,7 @@ def whatsapp_webhook():
 
         # 2. MASTER FILTER (सारे कीवर्ड्स जो आपने बोले थे):
         # इसमें चंडीगढ़/मोहाली + दिल्ली + गाड़ी के नाम + जरूरत/ड्रॉप सब कवर हैं
-        pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|dl|airport|gurugram|noida|gurgaon|janakpuri|fridabaad|ghaziabaad))(?=.*(sedan|ertiga|innova|crysta|rumion|kiacarens|aura|dzire|dsire|ertica))(?=.*(drop|need|pickup))"
+        pattern = r"(?i)(chandigarh|chd|delhi|dl|गाड़ी|need)"
 
         # अगर मैसेज में सारे कीवर्ड्स मिल जाते हैं
         if re.search(pattern, text):
