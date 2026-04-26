@@ -46,7 +46,7 @@ def whatsapp_webhook():
 
 def send_to_my_group(message_text, sender_name):
     # मैसेज भेजने के लिए Green-API का URL
-    url = f"https://green-api.com{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
+    url = f"https://green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
     
     payload = {
         "chatId": TARGET_GROUP_ID,
