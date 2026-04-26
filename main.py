@@ -28,9 +28,18 @@ def whatsapp_webhook():
         if sender_chat_id == TARGET_GROUP_ID:
             return jsonify({"status": "ignored"}), 200
 
-        # अभी टेस्ट के लिए आसान फिल्टर (इनमें से कोई भी एक शब्द होगा तो मैसेज जाएगा)
-                # मास्टर फ़िल्टर: चंडीगढ़/मोहाली + दिल्ली + गाड़ी के नाम + जरूरत/ड्रॉप
-        pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|dl|airport|palam|noida|gurgaon))(?=.*(sedan|ertiga|innova|crysta|rumion|kiacarens|aura|dzire|swift|गाड़ी|gadi))(?=.*(drop|need|pickup|chahiye|booking|book|available))"
+                # 1. रूट और गाड़ी के शब्द (चंडीगढ़ + दिल्ली + गाड़ी)
+        route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|dl|airport|noida|gurgaon|gurugram|faridabaad|ghaziabaad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|dzire|ertica|suv|aura|rumion|dsire|smallcar|kiacarens))"
+        
+        # 2. ज़रूरत वाले शब्द (इनका होना सबसे ज़रूरी है)
+        need_words = r"(?i)(need|pickup|drop)"
+
+        # 3. लॉजिक: रूट/गाड़ी सही हो AND ज़रूरत वाला शब्द भी ज़रूर हो
+        if re.search(route_pattern, text) and re.search(need_words, text):
+            # अगर ये दोनों शर्तें पूरी होती हैं, तो मैसेज फॉरवर्ड होगा (चाहे उसमें 'Free' लिखा हो या नहीं)
+            sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
+            send_to_my_group(text, sender_name)
+
 
         if re.search(pattern, text):
             sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
