@@ -29,7 +29,8 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
 
         # अभी टेस्ट के लिए आसान फिल्टर (इनमें से कोई भी एक शब्द होगा तो मैसेज जाएगा)
-        pattern = r"(?i)(booking|need|drop|chd|delhi|chandigarh|zirakpur|mohali|panchkula|gurgaon|gurugram|noida|faridabaad|ertiga|dzire|innova)"
+                # मास्टर फ़िल्टर: चंडीगढ़/मोहाली + दिल्ली + गाड़ी के नाम + जरूरत/ड्रॉप
+        pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|dl|airport|palam|noida|gurgaon))(?=.*(sedan|ertiga|innova|crysta|rumion|kiacarens|aura|dzire|swift|गाड़ी|gadi))(?=.*(drop|need|pickup|chahiye|booking|book|available))"
 
         if re.search(pattern, text):
             sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
