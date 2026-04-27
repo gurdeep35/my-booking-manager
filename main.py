@@ -31,7 +31,7 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
 
         # --- फ़िल्टर्स ---
-        city_a = r"(chandigarh|chd|mohali|kharar|zirakpur|panchkula|kurali|ropar|chamkaur)"
+        city_a = r"(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|kurali|ropar|roper|morinda|kharad|chamkaur)"
         city_b = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)"
         cars = r"(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens)"
         
