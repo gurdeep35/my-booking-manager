@@ -35,7 +35,7 @@ def whatsapp_webhook():
         city_b = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)"
         cars = r"(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens)"
         
-        need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown)"
+        need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up down)"
         junk_words = r"(?i)(free|khali|available|available now|खाली|any drop|any pickup|any drop/pickup)"
 
         # --- स्मार्ट डायनामिक हाफ-एरिया लॉजिक ---
