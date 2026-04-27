@@ -38,20 +38,27 @@ def whatsapp_webhook():
         need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up down)"
         junk_words = r"(?i)(free|khali|available|available now|खाली|any drop|any pickup|any drop/pickup)"
 
-        # --- स्मार्ट डायनामिक हाफ-एरिया लॉजिक ---
-        msg_length = len(text)
-        half_point = msg_length // 2
-        first_half = text[:half_point]
+        # 1. फिल्टर चेकिंग के लिए मैसेज को साफ करें (इमोजी और रिपीट शब्द हटाएं)
+        # इमोजी और खास चिन्ह हटाना
+        clean_text = re.sub(r'[^\w\s,]', ' ', text)
+        # लगातार रिपीट होने वाले शब्दों (जैसे Pick Pick Pick) को एक बार करना
+        clean_text = re.sub(r'\b(\w+)(?:\s+\1\b)+', r'\1', clean_text, flags=re.IGNORECASE)
+        # फालतू खाली जगह हटाना
+        clean_text = " ".join(clean_text.split())
 
-        # 1. सबसे पहले चेक करें: क्या शुरुआती आधे हिस्से में कचरा है?
+        # 2. साफ किए हुए मैसेज के हिसाब से आधा हिस्सा (First Half) निकालें
+        msg_length = len(clean_text)
+        half_point = msg_length // 2
+        first_half = clean_text[:half_point]
+
+        # 3. सबसे पहले चेक करें: क्या शुरुआती आधे हिस्से में कचरा है?
         if re.search(junk_words, first_half, re.DOTALL):
             return jsonify({"status": "starting_junk_ignored"}), 200
 
-        # 2. रूट चेकिंग (LINE-BY-LINE): 
-        # यह चेक करेगा कि क्या शहर A और शहर B का आपस में तालमेल है
+        # 4. रूट चेकिंग (LINE-BY-LINE)
         if re.search(f"(?i)(?=.*{city_a})(?=.*{city_b})", text, re.DOTALL):
             
-            # 3. अब गाड़ी और ज़रूरत (Need) को फर्स्ट हाफ में चेक करें
+            # 5. गाड़ी और ज़रूरत (Need) को साफ किए हुए फर्स्ट हाफ में चेक करें
             if re.search(cars, text, re.IGNORECASE) and re.search(need_words, first_half, re.DOTALL):
                 
                 current_time = time.time()
