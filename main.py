@@ -76,7 +76,7 @@ def send_to_my_group(message_text, sender_name):
     
     payload = {
         "chatId": TARGET_GROUP_ID,
-        "message": f"🔔 *NEW BOOKING ALERT*🚖\n\n{message_text}\n\n_King Travel Chandigarh_"
+        "message": f"🔔 *NEW BOOKING ALERT* 🚖\n\n{message_text}\n\n_King Travel Chandigarh_"
     }
     
     response = requests.post(url, json=payload)
