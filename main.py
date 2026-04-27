@@ -32,29 +32,42 @@ def whatsapp_webhook():
 
         # --- फ़िल्टर्स ---
         route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula|kurali|ropar|chamkaur))(?=.*(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens))"
+        
+        # आपके द्वारा दिए गए अनिवार्य शब्द
         need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown)"
 
-        # यहाँ re.DOTALL जोड़ा गया है ताकि अलग-अलग लाइनों को एक साथ पढ़ा जा सके
-        if re.search(route_pattern, text, re.DOTALL) and re.search(need_words, text, re.DOTALL):
-            current_time = time.time()
-            message_key = text.strip().lower()
+        # विज्ञापन (कचरा) वाले शब्द - जिन्हें रोकना है अगर बुकिंग शब्द न हों
+        junk_words = r"(?i)(free|khali|available|available now|खाली|any drop|any pickup|any drop/pickup)"
 
-            if message_key in sent_messages_cache:
-                if (current_time - sent_messages_cache[message_key]) < 600:
-                    return jsonify({"status": "duplicate_ignored"}), 200
+        # --- स्मार्ट फ़िल्टर लॉजिक ---
+        if re.search(route_pattern, text, re.DOTALL):
             
-            sent_messages_cache[message_key] = current_time
+            # शर्त 1: अगर विज्ञापन वाले शब्द हैं और आपके बुकिंग वाले शब्द (need_words) नहीं हैं, तो इग्नोर करें
+            if re.search(junk_words, text, re.DOTALL) and not re.search(need_words, text, re.DOTALL):
+                return jsonify({"status": "junk_ignored"}), 200
             
-            print("Message matched! Waiting 3 seconds before forwarding...")
-            time.sleep(3) 
-            
-            sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
-            send_to_my_group(text, sender_name)
+            # शर्त 2: मैसेज तभी फॉरवर्ड होगा जब आपके बुकिंग वाले शब्द (need_words) मौजूद हों
+            if re.search(need_words, text, re.DOTALL):
+                
+                current_time = time.time()
+                message_key = text.strip().lower()
+
+                if message_key in sent_messages_cache:
+                    if (current_time - sent_messages_cache[message_key]) < 600:
+                        return jsonify({"status": "duplicate_ignored"}), 200
+                
+                sent_messages_cache[message_key] = current_time
+                
+                print("Booking confirmed! Forwarding...")
+                time.sleep(3) 
+                
+                sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
+                send_to_my_group(text, sender_name)
 
     return jsonify({"status": "success"}), 200
 
 def send_to_my_group(message_text, sender_name):
-    url = f"https://api.green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
+    url = f"https://green-api.com{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
     
     payload = {
         "chatId": TARGET_GROUP_ID,
