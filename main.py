@@ -67,7 +67,7 @@ def whatsapp_webhook():
     return jsonify({"status": "success"}), 200
 
 def send_to_my_group(message_text, sender_name):
-    url = f"https://green-api.com{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
+    url = f"https://api.green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
     
     payload = {
         "chatId": TARGET_GROUP_ID,
