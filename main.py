@@ -30,13 +30,16 @@ def whatsapp_webhook():
         if sender_chat_id == TARGET_GROUP_ID:
             return jsonify({"status": "ignored"}), 200
 
-        # --- फ़िल्टर्स ---
-        city_a = r"(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|punchkulla|kurali|ropar|roper|morinda|kharad|chamkaur)"
-        city_b = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)"
-        cars = r"(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens)"
+                # --- एकदम सटीक फ़िल्टर्स ---
+        # हमने हर शब्द के आगे-पीछे \b लगाया है ताकि सिर्फ पूरा शब्द ही मैच हो
+        city_a = r"\b(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|kurali|ropar|roper|morinda|kharad|chamkaur)\b"
+        city_b = r"\b(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)\b"
         
-        need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up down)"
-        junk_words = r"(?i)(free|khali|available|available now|खाली|any drop|any pickup|any drop/pickup)"
+        # गाड़ी के नाम भी पूरे शब्द होने चाहिए (ताकि 'mangat' के 'at' से मैच न हो)
+        cars = r"\b(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens)\b"
+        
+        need_words = r"(?i)\b(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up\s*down)\b"
+        junk_words = r"(?i)\b(free|khali|available|available\s*now|खाली|any\s*drop|any\s*pickup|any\s*drop/pickup)\b"
 
         # 1. फिल्टर चेकिंग के लिए मैसेज को साफ करें (इमोजी और रिपीट शब्द हटाएं)
         # इमोजी और खास चिन्ह हटाना
