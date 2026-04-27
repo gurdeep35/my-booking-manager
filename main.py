@@ -31,29 +31,28 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
 
         # --- फ़िल्टर्स ---
-        route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula|kurali|ropar|chamkaur))(?=.*(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens))"
+        city_a = r"(chandigarh|chd|mohali|kharar|zirakpur|panchkula|kurali|ropar|chamkaur)"
+        city_b = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)"
+        cars = r"(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens)"
         
-        # आपके द्वारा दिए गए अनिवार्य शब्द
         need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown)"
-
-        # विज्ञापन (कचरा) वाले शब्द
         junk_words = r"(?i)(free|khali|available|available now|खाली|any drop|any pickup|any drop/pickup)"
 
         # --- स्मार्ट डायनामिक हाफ-एरिया लॉजिक ---
         msg_length = len(text)
         half_point = msg_length // 2
-        first_half = text[:half_point] # यह मैसेज का शुरुआती आधा हिस्सा है
+        first_half = text[:half_point]
 
-        # 1. सबसे पहले चेक करें: क्या शुरुआती आधे हिस्से (First Half) में कचरा शब्द है?
+        # 1. सबसे पहले चेक करें: क्या शुरुआती आधे हिस्से में कचरा है?
         if re.search(junk_words, first_half, re.DOTALL):
-            print("Junk found in the first half. Rejecting immediately.")
             return jsonify({"status": "starting_junk_ignored"}), 200
 
-        # 2. अगर शुरुआत साफ है, तो मुख्य फ़िल्टर चेक करें
-        if re.search(route_pattern, text, re.DOTALL):
+        # 2. रूट चेकिंग (LINE-BY-LINE): 
+        # यह चेक करेगा कि क्या शहर A और शहर B का आपस में तालमेल है
+        if re.search(f"(?i)(?=.*{city_a})(?=.*{city_b})", text, re.DOTALL):
             
-            # बुकिंग तभी मानी जाएगी जब शुरुआती आधे हिस्से (First Half) में 'Need/Drop' शब्द हो
-            if re.search(need_words, first_half, re.DOTALL):
+            # 3. अब गाड़ी और ज़रूरत (Need) को फर्स्ट हाफ में चेक करें
+            if re.search(cars, text, re.IGNORECASE) and re.search(need_words, first_half, re.DOTALL):
                 
                 current_time = time.time()
                 message_key = text.strip().lower()
@@ -64,7 +63,7 @@ def whatsapp_webhook():
                 
                 sent_messages_cache[message_key] = current_time
                 
-                print("Clean booking found in first half! Forwarding...")
+                print("Clean booking found! Forwarding...")
                 time.sleep(3) 
                 
                 sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
