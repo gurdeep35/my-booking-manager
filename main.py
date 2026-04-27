@@ -31,7 +31,7 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
 
         # --- फ़िल्टर्स ---
-        route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens))"
+        route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula|kurali|ropar|chamkaur))(?=.*(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens))"
         need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown)"
 
         if re.search(route_pattern, text) and re.search(need_words, text):
