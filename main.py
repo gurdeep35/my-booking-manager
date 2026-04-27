@@ -39,19 +39,20 @@ def whatsapp_webhook():
         # विज्ञापन (कचरा) वाले शब्द
         junk_words = r"(?i)(free|khali|available|available now|खाली|any drop|any pickup|any drop/pickup)"
 
-        # --- हाफ-एरिया लॉजिक ---
+        # --- स्मार्ट डायनामिक हाफ-एरिया लॉजिक ---
         msg_length = len(text)
         half_point = msg_length // 2
-        first_half = text[:half_point] # मैसेज का शुरुआती आधा हिस्सा
+        first_half = text[:half_point] # यह मैसेज का शुरुआती आधा हिस्सा है
 
-        # शर्त 1: क्या पूरे मैसेज में रूट और गाड़ी है?
+        # 1. सबसे पहले चेक करें: क्या शुरुआती आधे हिस्से (First Half) में कचरा शब्द है?
+        if re.search(junk_words, first_half, re.DOTALL):
+            print("Junk found in the first half. Rejecting immediately.")
+            return jsonify({"status": "starting_junk_ignored"}), 200
+
+        # 2. अगर शुरुआत साफ है, तो मुख्य फ़िल्टर चेक करें
         if re.search(route_pattern, text, re.DOTALL):
             
-            # शर्त 2: क्या शुरुआती आधे हिस्से में कचरा है और बुकिंग शब्द नहीं है?
-            if re.search(junk_words, first_half, re.DOTALL) and not re.search(need_words, first_half, re.DOTALL):
-                return jsonify({"status": "junk_in_first_half_ignored"}), 200
-            
-            # शर्त 3: मैसेज तभी फॉरवर्ड होगा जब शुरुआती आधे हिस्से में बुकिंग शब्द (need_words) मौजूद हों
+            # बुकिंग तभी मानी जाएगी जब शुरुआती आधे हिस्से (First Half) में 'Need/Drop' शब्द हो
             if re.search(need_words, first_half, re.DOTALL):
                 
                 current_time = time.time()
@@ -63,7 +64,7 @@ def whatsapp_webhook():
                 
                 sent_messages_cache[message_key] = current_time
                 
-                print("Booking confirmed in first half! Forwarding...")
+                print("Clean booking found in first half! Forwarding...")
                 time.sleep(3) 
                 
                 sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
