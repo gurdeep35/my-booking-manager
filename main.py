@@ -33,7 +33,7 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
 
         # 1. रूट और गाड़ी के शब्द
-        route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|delhiairport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|dzire|ertica|suv|aura|rumion|dsire|smallcar|kiacarens))"
+route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|dzire|ertica|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens))"
         
         # 2. ज़रूरत वाले शब्द
         need_words = r"(?i)(need|pickup|drop|pick|pik|pikup|pic|updown)"
@@ -64,9 +64,9 @@ def whatsapp_webhook():
 def send_to_my_group(message_text, sender_name):
     url = f"https://api.green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
     
-    payload = {
+       payload = {
         "chatId": TARGET_GROUP_ID,
-        "message": f"🔔 *New Booking Alert*\n\n👤 From: {sender_name}\n💬 Message: {message_text}"
+        "message": f"🔔 *New Booking Alert*\n\n{message_text}"
     }
     
     response = requests.post(url, json=payload)
