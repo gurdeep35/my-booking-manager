@@ -34,7 +34,8 @@ def whatsapp_webhook():
         route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula|kurali|ropar|chamkaur))(?=.*(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens))"
         need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown)"
 
-        if re.search(route_pattern, text) and re.search(need_words, text):
+        # यहाँ re.DOTALL जोड़ा गया है ताकि अलग-अलग लाइनों को एक साथ पढ़ा जा सके
+        if re.search(route_pattern, text, re.DOTALL) and re.search(need_words, text, re.DOTALL):
             current_time = time.time()
             message_key = text.strip().lower()
 
@@ -57,7 +58,7 @@ def send_to_my_group(message_text, sender_name):
     
     payload = {
         "chatId": TARGET_GROUP_ID,
-        "message": f"🔔 *NEW BOOKING ALERT* 🚕\n\n{message_text}\n\n_By King Travel Chd_"
+        "message": f"🔔 *NEW BOOKING ALERT* 🚕\n\n{message_text}\n\n_King Travel Chandigarh_"
     }
     
     response = requests.post(url, json=payload)
