@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import requests
 import re
-import time # समय और डिले के लिए ज़रूरी
+import time
 
 app = Flask(__name__)
 
@@ -11,7 +11,6 @@ API_TOKEN_INSTANCE = '8699796b89a048468a0c22ac1c6f3ac2c834805e647a4c779c'
 TARGET_GROUP_ID = '120363424995994566@g.us'
 # ------------------
 
-# रिपीट मैसेज रोकने के लिए याददाश्त (Memory)
 sent_messages_cache = {}
 
 @app.route('/webhook', methods=['POST'])
@@ -27,21 +26,15 @@ def whatsapp_webhook():
         elif 'extendedTextMessageData' in message_data:
             text = message_data['extendedTextMessageData'].get('text', '')
 
-        # लूप रोकने के लिए
         sender_chat_id = data.get('senderData', {}).get('chatId', '')
         if sender_chat_id == TARGET_GROUP_ID:
             return jsonify({"status": "ignored"}), 200
 
-        # 1. रूट और गाड़ी के शब्द
-route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens))"
-        
-        # 2. ज़रूरत वाले शब्द
+        # --- फ़िल्टर्स ---
+        route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|crista|suv|Ertika|aura|rumion|dsire|smallcar|kiacarens))"
         need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown)"
 
-        # 3. लॉजिक, डुप्लीकेट फ़िल्टर और डिले
         if re.search(route_pattern, text) and re.search(need_words, text):
-            
-            # --- मैसेज रिपीट न हो उसके लिए चेक ---
             current_time = time.time()
             message_key = text.strip().lower()
 
@@ -49,10 +42,8 @@ route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=
                 if (current_time - sent_messages_cache[message_key]) < 600:
                     return jsonify({"status": "duplicate_ignored"}), 200
             
-            # याददाश्त में सेव करें
             sent_messages_cache[message_key] = current_time
             
-            # --- 3 सेकंड का डिले (मैसेज भेजने से पहले इंतज़ार) ---
             print("Message matched! Waiting 3 seconds before forwarding...")
             time.sleep(3) 
             
@@ -64,7 +55,7 @@ route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=
 def send_to_my_group(message_text, sender_name):
     url = f"https://api.green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
     
-           payload = {
+    payload = {
         "chatId": TARGET_GROUP_ID,
         "message": f"🔔 *NEW BOOKING ALERT* 🚕\n\n{message_text}\n\n_By King Travel Chd_"
     }
