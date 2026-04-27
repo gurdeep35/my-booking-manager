@@ -36,18 +36,23 @@ def whatsapp_webhook():
         # आपके द्वारा दिए गए अनिवार्य शब्द
         need_words = r"(?i)(need|pickup|picup|drop|pick|pik|pikup|pic|updown)"
 
-        # विज्ञापन (कचरा) वाले शब्द - जिन्हें रोकना है अगर बुकिंग शब्द न हों
+        # विज्ञापन (कचरा) वाले शब्द
         junk_words = r"(?i)(free|khali|available|available now|खाली|any drop|any pickup|any drop/pickup)"
 
-        # --- स्मार्ट फ़िल्टर लॉजिक ---
+        # --- हाफ-एरिया लॉजिक ---
+        msg_length = len(text)
+        half_point = msg_length // 2
+        first_half = text[:half_point] # मैसेज का शुरुआती आधा हिस्सा
+
+        # शर्त 1: क्या पूरे मैसेज में रूट और गाड़ी है?
         if re.search(route_pattern, text, re.DOTALL):
             
-            # शर्त 1: अगर विज्ञापन वाले शब्द हैं और आपके बुकिंग वाले शब्द (need_words) नहीं हैं, तो इग्नोर करें
-            if re.search(junk_words, text, re.DOTALL) and not re.search(need_words, text, re.DOTALL):
-                return jsonify({"status": "junk_ignored"}), 200
+            # शर्त 2: क्या शुरुआती आधे हिस्से में कचरा है और बुकिंग शब्द नहीं है?
+            if re.search(junk_words, first_half, re.DOTALL) and not re.search(need_words, first_half, re.DOTALL):
+                return jsonify({"status": "junk_in_first_half_ignored"}), 200
             
-            # शर्त 2: मैसेज तभी फॉरवर्ड होगा जब आपके बुकिंग वाले शब्द (need_words) मौजूद हों
-            if re.search(need_words, text, re.DOTALL):
+            # शर्त 3: मैसेज तभी फॉरवर्ड होगा जब शुरुआती आधे हिस्से में बुकिंग शब्द (need_words) मौजूद हों
+            if re.search(need_words, first_half, re.DOTALL):
                 
                 current_time = time.time()
                 message_key = text.strip().lower()
@@ -58,7 +63,7 @@ def whatsapp_webhook():
                 
                 sent_messages_cache[message_key] = current_time
                 
-                print("Booking confirmed! Forwarding...")
+                print("Booking confirmed in first half! Forwarding...")
                 time.sleep(3) 
                 
                 sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
@@ -71,7 +76,7 @@ def send_to_my_group(message_text, sender_name):
     
     payload = {
         "chatId": TARGET_GROUP_ID,
-        "message": f"🔔 *NEW BOOKING ALERT* 🚕\n\n{message_text}\n\n_King Travel Chandigarh_"
+        "message": f"🔔 *NEW BOOKING ALERT 🔔🚖🚖🚖\n\n{message_text}\n\n_King Travel Chandigarh_"
     }
     
     response = requests.post(url, json=payload)
