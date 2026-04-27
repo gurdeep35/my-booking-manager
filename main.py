@@ -33,10 +33,10 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
 
         # 1. रूट और गाड़ी के शब्द
-        route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|dl|airport|noida|gurgaon|gurugram|faridabaad|ghaziabaad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|dzire|ertica|suv|aura|rumion|dsire|smallcar|kiacarens))"
+        route_pattern = r"(?i)(?=.*(chandigarh|chd|mohali|kharar|zirakpur|panchkula))(?=.*(delhi|delhiairport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur))(?=.*(sedan|ertiga|innova|crysta|dzire|ertica|suv|aura|rumion|dsire|smallcar|kiacarens))"
         
         # 2. ज़रूरत वाले शब्द
-        need_words = r"(?i)(need|pickup|drop)"
+        need_words = r"(?i)(need|pickup|drop|pick|pik|pikup|pic|updown)"
 
         # 3. लॉजिक, डुप्लीकेट फ़िल्टर और डिले
         if re.search(route_pattern, text) and re.search(need_words, text):
