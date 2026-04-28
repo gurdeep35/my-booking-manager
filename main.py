@@ -37,26 +37,24 @@ def whatsapp_webhook():
         need_words = r"(?i)\b(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up\s*down)\b"
         junk_words = r"(?i)\b(free|khali|available|available\s*now|खाली|any\s*drop|any\s*pickup|any\s*drop/pickup|required)\b"
 
-        # --- [START] NEW STRICT FIRST LINE CONDITION ---
+        # --- [START] NEW SMART ABC FIRST LINE CONDITION ---
         raw_lines = text.split('\n')
-        if raw_lines:
-            first_line = raw_lines[0]
-            # इमोजी, स्पेस और स्पेशल कैरेक्टर हटाकर चेक करना
-            super_clean_line = re.sub(r'[^a-zA-Z0-9]', '', first_line).lower()
+        first_real_abc_line = ""
 
-            cars_list = ["sedan","ertiga","innova","crysta","etios","artiga","dzire","ertica","dzier","crista","eartiga","suv","ertika","aura","rumion","dsire","smallcar","kiacarens"]
-            cities_list = ["chandigarh","chd","mohali","kharar","zirakpur","panchkula","punchkula","kurali","ropar","roper","morinda","kharad","chamkaur","delhi"]
+        for line in raw_lines:
+            # 1. सिर्फ अक्षरों (A-Z) को चेक करें (नंबर, स्पेस और इमोजी हटाकर)
+            only_abc_check = re.sub(r'[^a-zA-Z]', '', line)
+            
+            # 2. अगर लाइन में कम से कम एक अक्षर मिला, तो यही हमारी पहली लाइन है
+            if only_abc_check:
+                # चेकिंग के लिए हम उस लाइन का टेक्स्ट (बिना स्पेशल कैरेक्टर के) लेंगे
+                first_real_abc_line = re.sub(r'[^a-zA-Z0-9]', '', line).lower()
+                break 
 
-            # गाड़ी/शहर के साथ free का चेक (दोनों ऑर्डर: word+free और free+word)
-            has_car_free = any(c + "free" in super_clean_line or "free" + c in super_clean_line for c in cars_list)
-            has_city_free = any(ct + "free" in super_clean_line or "free" + ct in super_clean_line for ct in cities_list)
-            # मल्टीपल free (freefree) और any marketing चेक
-            has_multiple_free = len(re.findall(r'free', super_clean_line)) >= 2
-            has_any_marketing = any(x in super_clean_line for x in ["anypik", "anypick", "anydrop", "anypickup"])
-
-            if has_car_free or has_city_free or has_multiple_free or has_any_marketing:
-                return jsonify({"status": "blocked_strict_marketing_first_line"}), 200
-        # --- [END] NEW STRICT FIRST LINE CONDITION ---
+        # 3. अगर पहली असली ABC लाइन में 'free' है, तो सीधा BLOCK
+        if first_real_abc_line and "free" in first_real_abc_line:
+            return jsonify({"status": "blocked_free_in_first_abc_line"}), 200
+        # --- [END] NEW SMART ABC FIRST LINE CONDITION ---
 
         # 1. क्लीनिंग
         clean_text = re.sub(r'[^\w\s,]', ' ', text)
