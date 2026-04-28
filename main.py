@@ -30,54 +30,62 @@ def whatsapp_webhook():
         if sender_chat_id == TARGET_GROUP_ID:
             return jsonify({"status": "ignored"}), 200
 
-                # --- एकदम सटीक फ़िल्टर्स ---
-        # हमने हर शब्द के आगे-पीछे \b लगाया है ताकि सिर्फ पूरा शब्द ही मैच हो
+        # --- एकदम सटीक फ़िल्टर्स ---
         city_a = r"\b(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|kurali|ropar|roper|morinda|kharad|chamkaur)\b"
         city_b = r"\b(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)\b"
-        
-        # गाड़ी के नाम भी पूरे शब्द होने चाहिए (ताकि 'mangat' के 'at' से मैच न हो)
         cars = r"(?i)\b(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|dzier|crista|eartiga|suv|Ertika|aura|rumion|dsire|small\s*car|kia\s*carens)\b"
-        
         need_words = r"(?i)\b(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up\s*down)\b"
-        junk_words = r"(?i)\b(free|khali|available|available\s*now|खाली|any\s*drop|any\s*pickup|any\s*drop/pickup)\b"
+        # junk_words में 'available' और 'required' दोनों शामिल हैं
+        junk_words = r"(?i)\b(free|khali|available|available\s*now|खाली|any\s*drop|any\s*pickup|any\s*drop/pickup|required)\b"
 
-        # 1. फिल्टर चेकिंग के लिए मैसेज को साफ करें (इमोजी और रिपीट शब्द हटाएं)
-        # इमोजी और खास चिन्ह हटाना
+        # 1. क्लीनिंग
         clean_text = re.sub(r'[^\w\s,]', ' ', text)
-        # लगातार रिपीट होने वाले शब्दों (जैसे Pick Pick Pick) को एक बार करना
         clean_text = re.sub(r'\b(\w+)(?:\s+\1\b)+', r'\1', clean_text, flags=re.IGNORECASE)
-        # फालतू खाली जगह हटाना
         clean_text = " ".join(clean_text.split())
 
-        # 2. साफ किए हुए मैसेज के हिसाब से आधा हिस्सा (First Half) निकालें
+        # 2. फर्स्ट हाफ निकालना
         msg_length = len(clean_text)
         half_point = msg_length // 2
         first_half = clean_text[:half_point]
 
-        # 3. सबसे पहले चेक करें: क्या शुरुआती आधे हिस्से में कचरा है?
+        # --- स्मार्ट कंबो चेक ---
+        thirty_limit = int(msg_length * 0.30)
+        first_30_text = clean_text[:thirty_limit]
+        valid_words_pattern = r"(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up\s*down)"
+        status_words_pattern = r"(available|avail)" 
+        is_valid_combo = re.search(fr"(?i)\b{valid_words_pattern}\b\s*\b{status_words_pattern}\b", first_30_text)
+
+        # --- मुख्य स्मार्ट कंडीशन ---
+        # पहले चेक करें कि क्या शहर मौजूद हैं
+        has_route = re.search(f"(?i)(?=.*{city_a})(?=.*{city_b})", text, re.DOTALL)
+        # फिर चेक करें कि क्या फर्स्ट हाफ में गाड़ी और ज़रूरत है
+        is_booking_confirmed = re.search(cars, first_half, re.IGNORECASE) and re.search(need_words, first_half, re.IGNORECASE)
+
+        # 3. जंक फिल्टर (सुधरा हुआ)
         if re.search(junk_words, first_half, re.DOTALL):
-            return jsonify({"status": "starting_junk_ignored"}), 200
+            # अगर बुकिंग की शर्तें फर्स्ट हाफ में मिल गई हैं या कॉम्बो मिल गया है, तो इग्नोर न करें (Pass होने दें)
+            if is_booking_confirmed or is_valid_combo:
+                pass
+            else:
+                return jsonify({"status": "starting_junk_ignored"}), 200
 
-        # 4. रूट चेकिंग (LINE-BY-LINE)
-        if re.search(f"(?i)(?=.*{city_a})(?=.*{city_b})", text, re.DOTALL):
+        # 4. फाइनल रूट और बुकिंग सेंडिंग
+        if has_route and is_booking_confirmed:
             
-            # 5. गाड़ी और ज़रूरत (Need) को साफ किए हुए फर्स्ट हाफ में चेक करें
-            if re.search(cars, text, re.IGNORECASE) and re.search(need_words, first_half, re.DOTALL):
-                
-                current_time = time.time()
-                message_key = text.strip().lower()
+            current_time = time.time()
+            message_key = text.strip().lower()
 
-                if message_key in sent_messages_cache:
-                    if (current_time - sent_messages_cache[message_key]) < 600:
-                        return jsonify({"status": "duplicate_ignored"}), 200
-                
-                sent_messages_cache[message_key] = current_time
-                
-                print("Clean booking found! Forwarding...")
-                time.sleep(3) 
-                
-                sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
-                send_to_my_group(text, sender_name)
+            if message_key in sent_messages_cache:
+                if (current_time - sent_messages_cache[message_key]) < 600:
+                    return jsonify({"status": "duplicate_ignored"}), 200
+            
+            sent_messages_cache[message_key] = current_time
+            
+            print("Clean booking found! Forwarding...")
+            time.sleep(3) 
+            
+            sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
+            send_to_my_group(text, sender_name)
 
     return jsonify({"status": "success"}), 200
 
@@ -86,7 +94,7 @@ def send_to_my_group(message_text, sender_name):
     
     payload = {
         "chatId": TARGET_GROUP_ID,
-        "message": f"🔔 *NEW BOOKING ALERT* 🚖\n\n{message_text}\n\n_King Travel Chandigarh_"
+        "message": f"🔔 *NEW BOOKING ALERT* 🚖\n\n{message_text}\n\n_Taxi Deal Hub Chandigarh_"
     }
     
     response = requests.post(url, json=payload)
