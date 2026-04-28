@@ -35,8 +35,28 @@ def whatsapp_webhook():
         city_b = r"\b(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)\b"
         cars = r"(?i)\b(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|dzier|crista|eartiga|suv|Ertika|aura|rumion|dsire|small\s*car|kia\s*carens)\b"
         need_words = r"(?i)\b(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up\s*down)\b"
-        # junk_words में 'available' और 'required' दोनों शामिल हैं
         junk_words = r"(?i)\b(free|khali|available|available\s*now|खाली|any\s*drop|any\s*pickup|any\s*drop/pickup|required)\b"
+
+        # --- [START] NEW STRICT FIRST LINE CONDITION ---
+        raw_lines = text.split('\n')
+        if raw_lines:
+            first_line = raw_lines[0]
+            # इमोजी, स्पेस और स्पेशल कैरेक्टर हटाकर चेक करना
+            super_clean_line = re.sub(r'[^a-zA-Z0-9]', '', first_line).lower()
+
+            cars_list = ["sedan","ertiga","innova","crysta","etios","artiga","dzire","ertica","dzier","crista","eartiga","suv","ertika","aura","rumion","dsire","smallcar","kiacarens"]
+            cities_list = ["chandigarh","chd","mohali","kharar","zirakpur","panchkula","punchkula","kurali","ropar","roper","morinda","kharad","chamkaur","delhi"]
+
+            # गाड़ी/शहर के साथ free का चेक (दोनों ऑर्डर: word+free और free+word)
+            has_car_free = any(c + "free" in super_clean_line or "free" + c in super_clean_line for c in cars_list)
+            has_city_free = any(ct + "free" in super_clean_line or "free" + ct in super_clean_line for ct in cities_list)
+            # मल्टीपल free (freefree) और any marketing चेक
+            has_multiple_free = len(re.findall(r'free', super_clean_line)) >= 2
+            has_any_marketing = any(x in super_clean_line for x in ["anypik", "anypick", "anydrop", "anypickup"])
+
+            if has_car_free or has_city_free or has_multiple_free or has_any_marketing:
+                return jsonify({"status": "blocked_strict_marketing_first_line"}), 200
+        # --- [END] NEW STRICT FIRST LINE CONDITION ---
 
         # 1. क्लीनिंग
         clean_text = re.sub(r'[^\w\s,]', ' ', text)
@@ -56,14 +76,11 @@ def whatsapp_webhook():
         is_valid_combo = re.search(fr"(?i)\b{valid_words_pattern}\b\s*\b{status_words_pattern}\b", first_30_text)
 
         # --- मुख्य स्मार्ट कंडीशन ---
-        # पहले चेक करें कि क्या शहर मौजूद हैं
         has_route = re.search(f"(?i)(?=.*{city_a})(?=.*{city_b})", text, re.DOTALL)
-        # फिर चेक करें कि क्या फर्स्ट हाफ में गाड़ी और ज़रूरत है
         is_booking_confirmed = re.search(cars, first_half, re.IGNORECASE) and re.search(need_words, first_half, re.IGNORECASE)
 
         # 3. जंक फिल्टर (सुधरा हुआ)
         if re.search(junk_words, first_half, re.DOTALL):
-            # अगर बुकिंग की शर्तें फर्स्ट हाफ में मिल गई हैं या कॉम्बो मिल गया है, तो इग्नोर न करें (Pass होने दें)
             if is_booking_confirmed or is_valid_combo:
                 pass
             else:
