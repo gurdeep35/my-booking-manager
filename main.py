@@ -31,30 +31,31 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
 
         # --- एकदम सटीक फ़िल्टर्स ---
-        city_a = r"\b(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|kurali|ropar|roper|morinda|kharad|chamkaur)\b"
-        city_b = r"\b(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)\b"
+                # --- अपडेटेड सिटी लिस्ट (Dera Bassi और New Chandigarh के साथ) ---
+        city_a_regex = r"(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|kurali|ropar|roper|pkl|morinda|kharad|chamkaur|dera\s*bassi|new\s*chandigarh)"
+        city_b_regex = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)"
+        
         cars = r"(?i)\b(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|dzier|crista|eartiga|suv|Ertika|aura|rumion|dsire|small\s*car|kia\s*carens)\b"
         need_words = r"(?i)\b(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up\s*down)\b"
         junk_words = r"(?i)\b(free|khali|available|available\s*now|खाली|any\s*drop|any\s*pickup|any\s*drop/pickup|required)\b"
 
-        # --- [START] NEW SMART ABC FIRST LINE CONDITION ---
+        # --- [1. SMART 2-TEXT-LINE 'FREE' BLOCKER] ---
+        # यह शुरू की 2 असली टेक्स्ट लाइनों में 'free' (इमोजी वाला भी) चेक करेगा
         raw_lines = text.split('\n')
-        first_real_abc_line = ""
-
+        lines_checked = 0
         for line in raw_lines:
-            # 1. सिर्फ अक्षरों (A-Z) को चेक करें (नंबर, स्पेस और इमोजी हटाकर)
-            only_abc_check = re.sub(r'[^a-zA-Z]', '', line)
-            
-            # 2. अगर लाइन में कम से कम एक अक्षर मिला, तो यही हमारी पहली लाइन है
-            if only_abc_check:
-                # चेकिंग के लिए हम उस लाइन का टेक्स्ट (बिना स्पेशल कैरेक्टर के) लेंगे
-                first_real_abc_line = re.sub(r'[^a-zA-Z0-9]', '', line).lower()
-                break 
+            abc_only = re.sub(r'[^a-zA-Z]', '', line).lower()
+            if abc_only:
+                lines_checked += 1
+                if "free" in abc_only:
+                    return jsonify({"status": "blocked_free_in_top_lines"}), 200
+                if lines_checked >= 2:
+                    break
 
-        # 3. अगर पहली असली ABC लाइन में 'free' है, तो सीधा BLOCK
-        if first_real_abc_line and "free" in first_real_abc_line:
-            return jsonify({"status": "blocked_free_in_first_abc_line"}), 200
-        # --- [END] NEW SMART ABC FIRST LINE CONDITION ---
+        # --- [2. SMART ROUTE CHECK (A और B शहर पास होने चाहिए)] ---
+        # शहरों के बीच अधिकतम 50 अक्षरों का गैप होना चाहिए
+        route_pattern = f"(?i)({city_a_regex}.{{0,50}}{city_b_regex})|({city_b_regex}.{{0,50}}{city_a_regex})"
+        has_smart_route = re.search(route_pattern, text, re.DOTALL)
 
         # 1. क्लीनिंग
         clean_text = re.sub(r'[^\w\s,]', ' ', text)
@@ -74,7 +75,6 @@ def whatsapp_webhook():
         is_valid_combo = re.search(fr"(?i)\b{valid_words_pattern}\b\s*\b{status_words_pattern}\b", first_30_text)
 
         # --- मुख्य स्मार्ट कंडीशन ---
-        has_route = re.search(f"(?i)(?=.*{city_a})(?=.*{city_b})", text, re.DOTALL)
         is_booking_confirmed = re.search(cars, first_half, re.IGNORECASE) and re.search(need_words, first_half, re.IGNORECASE)
 
         # 3. जंक फिल्टर (सुधरा हुआ)
@@ -85,7 +85,8 @@ def whatsapp_webhook():
                 return jsonify({"status": "starting_junk_ignored"}), 200
 
         # 4. फाइनल रूट और बुकिंग सेंडिंग
-        if has_route and is_booking_confirmed:
+        # अब यह तभी पास होगा जब शहर पास-पास (50 अक्षरों में) हों
+        if has_smart_route and is_booking_confirmed:
             
             current_time = time.time()
             message_key = text.strip().lower()
