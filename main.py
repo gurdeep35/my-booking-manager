@@ -30,8 +30,7 @@ def whatsapp_webhook():
         if sender_chat_id == TARGET_GROUP_ID:
             return jsonify({"status": "ignored"}), 200
 
-        # --- एकदम सटीक फ़िल्टर्स ---
-                # --- अपडेटेड सिटी लिस्ट (Dera Bassi और New Chandigarh के साथ) ---
+        # --- फ़िल्टर्स ---
         city_a_regex = r"(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|kurali|ropar|roper|pkl|morinda|kharad|chamkaur|dera\s*bassi|new\s*chandigarh)"
         city_b_regex = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)"
         
@@ -40,7 +39,6 @@ def whatsapp_webhook():
         junk_words = r"(?i)\b(free|khali|available|available\s*now|खाली|any\s*drop|any\s*pickup|any\s*drop/pickup|required)\b"
 
         # --- [1. SMART 2-TEXT-LINE 'FREE' BLOCKER] ---
-        # यह शुरू की 2 असली टेक्स्ट लाइनों में 'free' (इमोजी वाला भी) चेक करेगा
         raw_lines = text.split('\n')
         lines_checked = 0
         for line in raw_lines:
@@ -53,7 +51,6 @@ def whatsapp_webhook():
                     break
 
         # --- [2. SMART ROUTE CHECK (A और B शहर पास होने चाहिए)] ---
-        # शहरों के बीच अधिकतम 50 अक्षरों का गैप होना चाहिए
         route_pattern = f"(?i)({city_a_regex}.{{0,50}}{city_b_regex})|({city_b_regex}.{{0,50}}{city_a_regex})"
         has_smart_route = re.search(route_pattern, text, re.DOTALL)
 
@@ -77,7 +74,7 @@ def whatsapp_webhook():
         # --- मुख्य स्मार्ट कंडीशन ---
         is_booking_confirmed = re.search(cars, first_half, re.IGNORECASE) and re.search(need_words, first_half, re.IGNORECASE)
 
-        # 3. जंक फिल्टर (सुधरा हुआ)
+        # 3. जंक फिल्टर
         if re.search(junk_words, first_half, re.DOTALL):
             if is_booking_confirmed or is_valid_combo:
                 pass
@@ -85,9 +82,7 @@ def whatsapp_webhook():
                 return jsonify({"status": "starting_junk_ignored"}), 200
 
         # 4. फाइनल रूट और बुकिंग सेंडिंग
-        # अब यह तभी पास होगा जब शहर पास-पास (50 अक्षरों में) हों
         if has_smart_route and is_booking_confirmed:
-            
             current_time = time.time()
             message_key = text.strip().lower()
 
@@ -108,9 +103,20 @@ def whatsapp_webhook():
 def send_to_my_group(message_text, sender_name):
     url = f"https://api.green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
     
+    # [Smart wa.me Link Converter]
+    # यह मैसेज के अंदर से 10 अंकों वाले नंबरों को ढूंढता है (बीच में स्पेस होने पर भी)
+    def make_clickable(match):
+        num = match.group(0).replace(" ", "").replace("-", "")
+        # व्हाट्सएप के लिए इंटरनेशनल फॉर्मेट (91) जोड़ना
+        clean_num = "91" + num if len(num) == 10 else num
+        return f"https://wa.me{clean_num}"
+
+    # रेगेक्स जो स्पेस वाले या बिना स्पेस वाले 10-अंकों के नंबर को पकड़ेगा
+    fixed_text = re.sub(r'\b\d{5}\s\d{5}\b|\b\d{10}\b', make_clickable, message_text)
+    
     payload = {
         "chatId": TARGET_GROUP_ID,
-        "message": f"🔔 *NEW BOOKING ALERT* 🚖\n\n{message_text}\n\n_*Taxi Deal Hub Chandigarh*_"
+        "message": f"🔔 *NEW BOOKING ALERT* 🚖\n\n{fixed_text}\n\n_*Taxi Deal Hub Chandigarh*_"
     }
     
     response = requests.post(url, json=payload)
