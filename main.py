@@ -74,7 +74,7 @@ def whatsapp_webhook():
         # --- मुख्य स्मार्ट कंडीशन ---
         is_booking_confirmed = re.search(cars, first_half, re.IGNORECASE) and re.search(need_words, first_half, re.IGNORECASE)
 
-        # 3. जंक फिल्टर
+        # 3. जंक फिल्टर (सुधरा हुआ)
         if re.search(junk_words, first_half, re.DOTALL):
             if is_booking_confirmed or is_valid_combo:
                 pass
@@ -83,6 +83,7 @@ def whatsapp_webhook():
 
         # 4. फाइनल रूट और बुकिंग सेंडिंग
         if has_smart_route and is_booking_confirmed:
+            
             current_time = time.time()
             message_key = text.strip().lower()
 
@@ -103,16 +104,11 @@ def whatsapp_webhook():
 def send_to_my_group(message_text, sender_name):
     url = f"https://api.green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
     
-    # [Smart wa.me Link Converter]
-    # यह मैसेज के अंदर से 10 अंकों वाले नंबरों को ढूंढता है (बीच में स्पेस होने पर भी)
-    def make_clickable(match):
-        num = match.group(0).replace(" ", "").replace("-", "")
-        # व्हाट्सएप के लिए इंटरनेशनल फॉर्मेट (91) जोड़ना
-        clean_num = "91" + num if len(num) == 10 else num
-        return f"https://wa.me{clean_num}"
-
-    # रेगेक्स जो स्पेस वाले या बिना स्पेस वाले 10-अंकों के नंबर को पकड़ेगा
-    fixed_text = re.sub(r'\b\d{5}\s\d{5}\b|\b\d{10}\b', make_clickable, message_text)
+    # [Smart Number Fixer]: यह मैसेज के अंदर से नंबरों के बीच के स्पेस और डैश हटाएगा 
+    # (98881 23456 -> 9888123456)
+    # यह कोई wa.me लिंक नहीं जोड़ेगा, सिर्फ नंबरों को सटा देगा
+    fixed_text = re.sub(r'(\d)\s+(\d)', r'\1\2', message_text)
+    fixed_text = re.sub(r'(\d)-(\d)', r'\1\2', fixed_text)
     
     payload = {
         "chatId": TARGET_GROUP_ID,
