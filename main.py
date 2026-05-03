@@ -36,7 +36,7 @@ def whatsapp_webhook():
 
         # --- फ़िल्टर्स (चंडीगढ़ और पंजाब दोनों के लिए) ---
         city_chd = r"(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|kurali|ropar|roper|pkl|morinda|kharad|chamkaur|dera\s*bassi|new\s*chandigarh)"
-        city_punjab = r"(patiala|ludhiana|ldh|lud|jagraon|jalandhar|jld|amritsar|asr|khanna|sirhind|phagwara|rajpura|nabha|moga|sangrur|samrala|pathankot)"
+        city_punjab = r"(patiala|ludhiana|ldh|lud|jagraon|jalandhar|jld|amritsar|asr|khanna|sirhind|phagwara|rajpura|nabha|moga|barnala|kapurthala|phagwara|phillaur|sangrur|samrala|pathankot)"
         city_b_regex = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)"
         
         cars = r"(?i)\b(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|dzier|crista|eartiga|suv|Ertika|aura|rumion|dsire|small\s*car|kia\s*carens)\b"
