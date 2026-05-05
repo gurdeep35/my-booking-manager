@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # --- आपकी डिटेल्स ---
 ID_INSTANCE = '7107598578' 
-API_TOKEN_INSTANCE = '1e1080b22d2946bf80ac0ee3b60c7fd60651e2c6fa304274bc' 
+API_TOKEN_INSTANCE = '6fabd2c755cf46839d41aabff98ac0663222113d6e564126bf' 
 
 # --- दो अलग ग्रुप्स की ID ---
 GROUP_CHD = '120363424995994566@g.us' # चंडीगढ़ ग्रुप
