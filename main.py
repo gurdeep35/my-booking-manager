@@ -29,15 +29,21 @@ def whatsapp_webhook():
         elif 'extendedTextMessageData' in message_data:
             text = message_data['extendedTextMessageData'].get('text', '')
 
+        # --- [BLOCKER: EXCHANGE/XCHANGE] ---
+        # Agar msg mein xchange, exchange ya exxx hai toh turant block
+        block_keywords = r"(?i)(xchange|exchange|exxx)"
+        if re.search(block_keywords, text):
+            return jsonify({"status": "blocked_exchange_keyword"}), 200
+
         sender_chat_id = data.get('senderData', {}).get('chatId', '')
         # अपने ही ग्रुप्स के मैसेज दोबारा फॉरवर्ड न हों
         if sender_chat_id in [GROUP_CHD, GROUP_PUNJAB]:
             return jsonify({"status": "ignored"}), 200
 
-        # --- फ़िल्टर्स (चंडीगढ़ और पंजाब दोनों के लिए) ---
+        # --- फ़िल्टर्स ---
         city_chd = r"(chandigarh|chd|mohali|kharar|zirakpur|panchkula|punchkula|kurali|ropar|roper|pkl|morinda|kharad|chamkaur|dera\s*bassi|new\s*chandigarh)"
-        city_punjab = r"(patiala|ludhiana|ldh|lud|jagraon|jalandhar|jld|amritsar|asr|khanna|sirhind|phagwara|rajpura|nabha|moga|barnala|kapurthala|phagwara|phillaur|sangrur|samrala|pathankot)"
-        city_b_regex = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur)"
+        city_punjab = r"(patiala|ludhiana|ldh|lud|jagraon|jalandhar|jld|amritsar|asr|khanna|sirhind|phagwara|rajpura|nabha|moga|barnala|kapurthala|phagwara|phillaur|sangrur|samrala|pathankot|jammu)"
+        city_b_regex = r"(delhi|delhi\s*airport|noida|gurgaon|gurugram|faridabad|ghaziabad|janakpuri|mahipalpur|manali|shimla)"
         
         cars = r"(?i)\b(sedan|ertiga|innova|crysta|etios|Artiga|dzire|ertica|dzier|crista|eartiga|suv|Ertika|aura|rumion|dsire|small\s*car|kia\s*carens)\b"
         need_words = r"(?i)\b(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up\s*down)\b"
@@ -55,38 +61,31 @@ def whatsapp_webhook():
                 if lines_checked >= 2:
                     break
 
-        # --- [2. SMART ROUTE CHECK (चंडीगढ़ और पंजाब अलग-अलग)] ---
+        # --- [2. SMART ROUTE CHECK] ---
         chd_route = re.search(f"(?i)({city_chd}.{{0,50}}{city_b_regex})|({city_b_regex}.{{0,50}}{city_chd})", text, re.DOTALL)
         punjab_route = re.search(f"(?i)({city_punjab}.{{0,50}}{city_b_regex})|({city_b_regex}.{{0,50}}{city_punjab})", text, re.DOTALL)
 
-        # 1. क्लीनिंग
         clean_text = re.sub(r'[^\w\s,]', ' ', text)
         clean_text = re.sub(r'\b(\w+)(?:\s+\1\b)+', r'\1', clean_text, flags=re.IGNORECASE)
         clean_text = " ".join(clean_text.split())
 
-        # 2. फर्स्ट हाफ निकालना
         msg_length = len(clean_text)
         half_point = msg_length // 2
         first_half = clean_text[:half_point]
 
-        # --- स्मार्ट कंबो चेक ---
         thirty_limit = int(msg_length * 0.30)
         first_30_text = clean_text[:thirty_limit]
         valid_words_pattern = r"(need|pickup|picup|drop|pick|pik|pikup|pic|updown|duty|up\s*down)"
         status_words_pattern = r"(available|avail)" 
         is_valid_combo = re.search(fr"(?i)\b{valid_words_pattern}\b\s*\b{status_words_pattern}\b", first_30_text)
 
-        # --- मुख्य स्मार्ट कंडीशन ---
         is_booking_confirmed = re.search(cars, first_half, re.IGNORECASE) and re.search(need_words, first_half, re.IGNORECASE)
 
-        # 3. जंक फिल्टर
         if re.search(junk_words, first_half, re.DOTALL):
-            if is_booking_confirmed or is_valid_combo:
-                pass
-            else:
+            if not (is_booking_confirmed or is_valid_combo):
                 return jsonify({"status": "starting_junk_ignored"}), 200
 
-        # 4. फाइनल रूट फैसला और सेंडिंग
+        # Final Decision
         if is_booking_confirmed:
             target_group = None
             signature = ""
@@ -107,27 +106,29 @@ def whatsapp_webhook():
                         return jsonify({"status": "duplicate_ignored"}), 200
                 
                 sent_messages_cache[message_key] = current_time
-                print(f"Booking found! Sending to {signature}...")
-                time.sleep(3) 
                 
-                sender_name = data.get('senderData', {}).get('senderName', 'Unknown')
-                send_to_group(text, sender_name, target_group, signature)
+                # --- [CHECK FOR EXISTING HEADER/FOOTER] ---
+                # Agar msg me pehle se Alert aur Signature hai toh extra format nahi lagayenge
+                if "NEW BOOKING ALERT" in text.upper() and ("Taxi Deal Hub" in text):
+                    final_msg = text
+                else:
+                    fixed_text = re.sub(r'(\d)\s+(\d)', r'\1\2', text)
+                    fixed_text = re.sub(r'(\d)-(\d)', r'\1\2', fixed_text)
+                    final_msg = f"🔔 *NEW BOOKING ALERT* 🚖\n\n{fixed_text}\n\n{signature}"
+
+                print(f"Sending to {target_group}...")
+                send_raw_to_group(final_msg, target_group)
 
     return jsonify({"status": "success"}), 200
 
-def send_to_group(message_text, sender_name, target_group, signature):
+def send_raw_to_group(final_text, target_group):
     url = f"https://api.green-api.com/waInstance{ID_INSTANCE}/sendMessage/{API_TOKEN_INSTANCE}"
-    
-    fixed_text = re.sub(r'(\d)\s+(\d)', r'\1\2', message_text)
-    fixed_text = re.sub(r'(\d)-(\d)', r'\1\2', fixed_text)
-    
     payload = {
         "chatId": target_group,
-        "message": f"🔔 *NEW BOOKING ALERT* 🚖\n\n{fixed_text}\n\n{signature}"
+        "message": final_text
     }
-    
     response = requests.post(url, json=payload)
-    print(f"DEBUG: Sent to group. Response Code: {response.status_code}")
+    print(f"DEBUG: Response Code: {response.status_code}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
